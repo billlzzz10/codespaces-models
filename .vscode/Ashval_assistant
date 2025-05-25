@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ashval Writer Assistant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/js-yaml@4/dist/js-yaml.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Sarabun', sans-serif;
+        }
+        
+        .dark {
+            color-scheme: dark;
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 8px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: rgba(93, 92, 222, 0.5);
+            border-radius: 8px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(93, 92, 222, 0.7);
+        }
+        
+        /* Markdown styling */
+        .markdown-content h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-top: 1.5rem;
+            margin-bottom: 0.5rem;
+            color: #5D5CDE;
+        }
+        
+        .markdown-content h2 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-top: 1.2rem;
+            margin-bottom: 0.5rem;
+            color: #5D5CDE;
+        }
+        
+        .markdown-content h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .markdown-content p {
+            margin-bottom: 0.75rem;
+        }
+        
+        .markdown-content ul, .markdown-content ol {
+            margin-left: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .markdown-content ul {
+            list-style-type: disc;
+        }
+        
+        .markdown-content ol {
+            list-style-type: decimal;
+        }
+        
+        .markdown-content pre {
+            background: rgba(0, 0, 0, 0.05);
+            padding: 0.75rem;
+            border-radius: 0.25rem;
+            overflow-x: auto;
+            margin-bottom: 0.75rem;
+        }
+        
+        .markdown-content code {
+            font-family: monospace;
+            background: rgba(0, 0, 0, 0.05);
+            padding: 0.1rem 0.3rem;
+            border-radius: 0.25rem;
+        }
+        
+        .markdown-content pre code {
+            background: transparent;
+            padding: 0;
+        }
+        
+        .dark .markdown-content pre,
+        .dark .markdown-content code {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .loader {
+            width: 48px;
+            height: 48px;
+            border: 5px solid #5D5CDE;
+            border-bottom-color: transparent;
+            border-radius: 50%;
+            display: inline-block;
+            box-sizing: border-box;
+            animation: rotation 1s linear infinite;
+        }
+
+        @keyframes rotation {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+<body class="bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-screen">
+    <div class="container mx-auto px-4 py-6 max-w-6xl">
+        <header class="mb-6">
+            <h1 class="text-3xl font-bold text-center text-[#5D5CDE] dark:text-[#7A79E8] mb-2">Ashval Writer Assistant</h1>
+            <p class="text-center text-gray-600 dark:text-gray-400">ผู้ช่วยอัจฉริยะสำหรับนิยาย Ashval</p>
+        </header>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Left sidebar - Settings and Tools -->
+            <div class="lg:col-span-1">
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 mb-6">
+                    <h2 class="text-xl font-semibold mb-3 text-[#5D5CDE] dark:text-[#7A79E8]">โหมดการใช้งาน</h2>
+                    <div class="space-y-3">
+                        <select id="operation-mode" class="w-full p-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-700 text-base">
+                            <option value="scene-analysis">วิเคราะห์ฉาก</option>
+                            <option value="character-analysis">วิเคราะห์ตัวละคร</option>
+                            <option value="magic-system">วิเคราะห์ระบบเวท/Arcana</option>
+                            <option value="continuity-check">ตรวจสอบความต่อเนื่อง</option>
+                            <option value="scene-creation">สร้างฉากใหม่</option>
+                            <option value="scene-rewrite">ปรับปรุงฉาก</option>
+                            <option value="custom">กำหนดเอง</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 mb-6">
+                    <h2 class="text-xl font-semibold mb-3 text-[#5D5CDE] dark:text-[#7A79E8]">ตั้งค่า AI</h2>
+                    <div class="space-y-3">
+                        <select id="ai-model" class="w-full p-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-700 text-base">
+                            <option value="Claude-3.7-Sonnet">Claude-3.7-Sonnet (แนะนำ)</option>
+                            <option value="GPT-4o">GPT-4o</option>
+                            <option value="GPT-4o-mini">GPT-4o-mini</option>
+                        </select>
+                        
+                        <div class="flex items-center">
+                            <input type="checkbox" id="enable-stream" class="mr-2 h-4 w-4" checked>
+                            <label for="enable-stream">แสดงผลแบบ Streaming</label>
+                        </div>
+                        
+                        <div class="flex items-center">
+                            <input type="checkbox" id="enable-chat" class="mr-2 h-4 w-4">
+                            <label for="enable-chat">เปิดแชทเมื่อส่งข้อความ</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 mb-6">
+                    <h2 class="text-xl font-semibold mb-3 text-[#5D5CDE] dark:text-[#7A79E8]">YAML Metadata</h2>
+                    <div>
+                        <textarea id="yaml-metadata" class="w-full h-60 p-3 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-700 text-base font-mono" placeholder="# ใส่ metadata แบบ YAML ที่นี่
+title: Chapter 1 - The Beginning
+characters:
+  - name: Protagonist
+    arcana_level: 3
+  - name: Antagonist
+    arcana_level: 5
+location: Main City
+timeline: Day 1"></textarea>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Main content area - Input and Response -->
+            <div class="lg:col-span-2">
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 mb-6">
+                    <h2 class="text-xl font-semibold mb-3 text-[#5D5CDE] dark:text-[#7A79E8]">คำสั่ง / เนื้อหาที่ต้องการวิเคราะห์</h2>
+                    <div>
+                        <textarea id="input-prompt" class="w-full h-80 p-3 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-700 text-base" placeholder="ใส่ฉาก บทสนทนา หรือคำสั่งที่ต้องการให้ AI วิเคราะห์หรือปรับแต่ง..."></textarea>
+                    </div>
+                    <div class="mt-4 flex justify-between items-center">
+                        <button id="clear-input" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">ล้างข้อความ</button>
+                        <button id="send-prompt" class="px-6 py-2 bg-[#5D5CDE] dark:bg-[#7A79E8] text-white rounded-md hover:bg-[#4A49B1] dark:hover:bg-[#6867D3] transition-colors">ส่งไปยัง AI</button>
+                    </div>
+                </div>
+                
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 min-h-[400px]">
+                    <div class="flex justify-between items-center mb-3">
+                        <h2 class="text-xl font-semibold text-[#5D5CDE] dark:text-[#7A79E8]">การตอบกลับจาก AI</h2>
+                        <div class="flex gap-2">
+                            <button id="copy-response" class="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm">คัดลอก</button>
+                            <button id="export-markdown" class="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm">ส่งออก MD</button>
+                        </div>
+                    </div>
+                    <div id="loading-indicator" class="hidden flex justify-center py-10">
+                        <span class="loader"></span>
+                    </div>
+                    <div id="ai-response" class="markdown-content overflow-y-auto max-h-[600px] p-2">
+                        <p class="text-gray-500 dark:text-gray-400 italic">ผลลัพธ์จาก AI จะปรากฏที่นี่...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Dark mode detection
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+        
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+            if (event.matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        });
+
+        // DOM elements
+        const operationModeSelect = document.getElementById('operation-mode');
+        const aiModelSelect = document.getElementById('ai-model');
+        const enableStreamCheckbox = document.getElementById('enable-stream');
+        const enableChatCheckbox = document.getElementById('enable-chat');
+        const yamlMetadataTextarea = document.getElementById('yaml-metadata');
+        const inputPromptTextarea = document.getElementById('input-prompt');
+        const clearInputButton = document.getElementById('clear-input');
+        const sendPromptButton = document.getElementById('send-prompt');
+        const copyResponseButton = document.getElementById('copy-response');
+        const exportMarkdownButton = document.getElementById('export-markdown');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const aiResponseDiv = document.getElementById('ai-response');
+
+        // Default YAML examples for different operation modes
+        const yamlExamples = {
+            'scene-analysis': `# YAML for Scene Analysis
+title: เผชิญหน้า
+pov: ผู้เล่า (บุรุษที่ 3)
+characters:
+  - name: อาร์ควาล
+    mood: เคร่งเครียด
+    arcana_level: 7
+  - name: เวนเดล
+    mood: ระแวง
+    arcana_level: 5
+location: วิหารเก่าแห่งอาชอาทาล
+timeline: วันที่ 45 หลังเหตุการณ์ในบทที่ 7
+themes:
+  - การเผชิญหน้ากับความจริง
+  - การต่อสู้ภายในจิตใจ
+tone: เคร่งเครียด, ลึกลับ`,
+
+            'character-analysis': `# YAML for Character Analysis
+character:
+  name: อาร์ควาล
+  role: ตัวเอกฝ่ายตรงข้าม
+  arcana_type: ธาตุไฟ/ความมืด
+  arcana_level: 7
+  strengths:
+    - ความเด็ดขาด
+    - การวิเคราะห์จุดอ่อนคู่ต่อสู้
+  weaknesses:
+    - ความทรงจำที่ถูกปิดกั้น
+    - ความขัดแย้งภายในใจ
+  relationships:
+    - character: เวนเดล
+      type: ศัตรูในอดีต/พันธมิตรในปัจจุบัน
+    - character: มิไรอัล
+      type: อดีตคนรัก/ผู้ทรยศ
+  character_arc: การค้นพบตัวตนที่แท้จริง`,
+
+            'magic-system': `# YAML for Arcana System Analysis
+arcana_type: ธาตุไฟ/ความมืด
+tier_structure:
+  tier_1: การควบคุมเปลวไฟพื้นฐาน
+  tier_2: การสร้างรูปทรงพื้นฐานจากเปลวไฟ
+  tier_3: การควบคุมอุณหภูมิและการเผาไหม้
+  tier_4: การใช้ไฟในเชิงทำลายล้างและสร้างภาพลวงตา
+  tier_5: การแปรสภาพร่างกายบางส่วนเป็นเปลวไฟ
+  tier_6: การควบคุมไฟที่เกิดจากจิตวิญญาณ
+  tier_7: การแปรสภาพร่างทั้งหมดเป็นเปลวไฟแห่งความมืด
+limitations:
+  - ไม่สามารถควบคุมไฟที่ไม่ได้สร้างขึ้นเอง
+  - ใช้พลังมากเกินไปจะทำให้จิตใจถูกครอบงำโดยธาตุไฟ
+synergies:
+  - ธาตุลม: เพิ่มขอบเขตและความเร็วของเปลวไฟ
+  - ธาตุมืด: เพิ่มพลังทำลายล้างแต่ลดการควบคุม`,
+
+            'continuity-check': `# YAML for Continuity Check
+current_scene:
+  title: การเผชิญหน้าที่วิหารเก่า
+  chapter: 8
+  timeline_day: 45
+previous_events:
+  - event: อาร์ควาลได้รับบาดแผลที่แขนซ้าย
+    chapter: 6
+    timeline_day: 31
+  - event: เวนเดลเปิดเผยความลับเกี่ยวกับอดีตของตระกูลอาชวาล
+    chapter: 7
+    timeline_day: 42
+key_items:
+  - name: กริชแห่งอัคนี
+    last_seen: อยู่กับอาร์ควาลในบทที่ 7
+  - name: สร้อยคอมรกต
+    last_seen: ถูกทำลายในบทที่ 4
+character_knowledge:
+  - character: อาร์ควาล
+    knows_about:
+      - ความลับของวิหารเก่า
+      - ตำนานเกี่ยวกับเทพเจ้าไฟ
+    doesnt_know:
+      - ความเกี่ยวข้องของมิไรอัลกับกลุ่มลัทธิ
+  - character: เวนเดล
+    knows_about:
+      - แผนการของกลุ่มลัทธิ
+      - ตัวตนที่แท้จริงของอาร์ควาล
+    doesnt_know:
+      - ตำแหน่งของประตูมิติที่ซ่อนอยู่`,
+
+            'scene-creation': `# YAML for Scene Creation
+title: การเผชิญหน้าที่วิหารเก่า
+pov: อาร์ควาล (บุรุษที่ 1)
+location:
+  name: วิหารเก่าแห่งอาชอาทาล
+  attributes:
+    - เสาหินโบราณสลักลายเปลวไฟ
+    - แท่นบูชาแตกร้าวกลางห้อง
+    - แสงจันทร์ส่องผ่านหลังคาที่พังทลาย
+time: กลางคืน, ท้องฟ้าเต็มไปด้วยดวงดาว
+weather: อากาศเย็น, ลมพัดแรง
+characters:
+  - name: อาร์ควาล
+    mood: เคร่งเครียด, ระแวง
+    goal: ค้นหาความจริงเกี่ยวกับอดีต
+    conflict: กำลังสงสัยว่าตัวเองเป็นใครกันแน่
+  - name: เวนเดล
+    mood: สงบนิ่ง, รู้เท่าทัน
+    goal: เปิดเผยความจริงบางส่วน
+    conflict: ต้องปกปิดความลับบางอย่างไว้
+scene_goal: อาร์ควาลเผชิญหน้ากับเวนเดลและเรียกร้องให้เปิดเผยความจริงทั้งหมด
+emotions: ตึงเครียด, ความกดดัน, ความสงสัย
+pacing: ช้า แต่เต็มไปด้วยความตึงเครียด
+themes:
+  - การค้นหาตัวตน
+  - การเผชิญหน้ากับความจริง
+  - ความไว้เนื้อเชื่อใจ`,
+
+            'scene-rewrite': `# YAML for Scene Rewrite
+original_scene:
+  title: การเผชิญหน้าที่วิหารเก่า
+  pov: บุรุษที่ 3
+  chapter: 8
+rewrite_parameters:
+  new_pov: บุรุษที่ 1 (อาร์ควาล)
+  tone_shift: เพิ่มความเคร่งเครียดและความกดดัน
+  focus_on: ความขัดแย้งภายในใจของอาร์ควาล
+  add_elements:
+    - การแสดงออกของพลัง Arcana ระดับ 7
+    - การเปิดเผยความทรงจำบางส่วนที่หายไป
+  remove_elements:
+    - บทสนทนาเกี่ยวกับอดีตของเมืองหลวง
+    - การปรากฏตัวของตัวละครรอง
+pacing: ลดความเร็วของฉาก เน้นรายละเอียดความรู้สึกมากขึ้น`,
+
+            'custom': `# Custom YAML Metadata
+# เพิ่มข้อมูลตามต้องการ`
+        };
+
+        // Update YAML example when operation mode changes
+        operationModeSelect.addEventListener('change', () => {
+            const selectedMode = operationModeSelect.value;
+            yamlMetadataTextarea.value = yamlExamples[selectedMode] || '';
+        });
+
+        // Set initial YAML
+        yamlMetadataTextarea.value = yamlExamples['scene-analysis'];
+
+        // Clear input button
+        clearInputButton.addEventListener('click', () => {
+            inputPromptTextarea.value = '';
+        });
+
+        // Copy response button
+        copyResponseButton.addEventListener('click', () => {
+            const responseText = aiResponseDiv.innerText;
+            navigator.clipboard.writeText(responseText).then(() => {
+                alert('คัดลอกข้อความสำเร็จ');
+            }).catch(err => {
+                console.error('ไม่สามารถคัดลอกข้อความได้: ', err);
+            });
+        });
+
+        // Export markdown button
+        exportMarkdownButton.addEventListener('click', () => {
+            const responseText = aiResponseDiv.innerHTML;
+            const yamlMetadata = yamlMetadataTextarea.value;
+            
+            let markdownContent = '';
+            
+            // Add YAML frontmatter if available
+            if (yamlMetadata.trim()) {
+                markdownContent += '---\n' + yamlMetadata + '\n---\n\n';
+            }
+            
+            // Add response content (strip HTML and convert to markdown)
+            markdownContent += stripHtml(aiResponseDiv.innerHTML);
+            
+            // Create a blob and download link
+            const blob = new Blob([markdownContent], { type: 'text/markdown' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'ashval-' + new Date().toISOString().slice(0, 10) + '.md';
+            document.body.appendChild(a);
+            a.click();
+            
+            // Cleanup
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+
+        // Helper function to strip HTML for markdown export
+        function stripHtml(html) {
+            const doc = new DOMParser().parseFromString(html, 'text/html');
+            return doc.body.textContent || '';
+        }
+
+        // Send prompt to AI
+        sendPromptButton.addEventListener('click', async () => {
+            const inputPrompt = inputPromptTextarea.value.trim();
+            if (!inputPrompt) {
+                alert('กรุณาใส่ข้อความก่อนส่ง');
+                return;
+            }
+            
+            const operationMode = operationModeSelect.value;
+            const aiModel = aiModelSelect.value;
+            const yamlMetadata = yamlMetadataTextarea.value;
+            const enableStream = enableStreamCheckbox.checked;
+            const enableChat = enableChatCheckbox.checked;
+            
+            // Prepare the final prompt with YAML metadata and operation mode
+            let finalPrompt = `@${aiModel} `;
+            
+            finalPrompt += `คุณคือผู้ช่วยเขียนนิยายแฟนตาซีเรื่อง Ashval โดยทำหน้าที่เป็น "ผู้ช่วยอัจฉริยะ" ที่วิเคราะห์โครงเรื่อง/ตัวละคร/ระบบเวทย์/ความต่อเนื่อง\n\n`;
+            
+            finalPrompt += `โหมดปัจจุบัน: ${operationModeSelect.options[operationModeSelect.selectedIndex].text}\n\n`;
+            
+            if (yamlMetadata.trim()) {
+                finalPrompt += `YAML Metadata:\n\`\`\`yaml\n${yamlMetadata}\n\`\`\`\n\n`;
+            }
+            
+            finalPrompt += `คำสั่ง/เนื้อหา:\n${inputPrompt}\n\n`;
+            
+            // Add specific instructions based on the operation mode
+            switch (operationMode) {
+                case 'scene-analysis':
+                    finalPrompt += `กรุณาวิเคราะห์ฉากนี้ ครอบคลุมประเด็นต่อไปนี้:
+1. โทนและอารมณ์ของฉาก
+2. การพัฒนาตัวละครในฉากนี้
+3. ความสอดคล้องกับธีมหลักของเรื่อง
+4. จุดแข็งและจุดที่ควรปรับปรุง
+5. ข้อเสนอแนะเพื่อเพิ่มผลกระทบทางอารมณ์`;
+                    break;
+                case 'character-analysis':
+                    finalPrompt += `กรุณาวิเคราะห์ตัวละครนี้ ครอบคลุมประเด็นต่อไปนี้:
+1. บุคลิกและแรงจูงใจ
+2. พัฒนาการของตัวละคร
+3. ความสัมพันธ์กับตัวละครอื่น
+4. ความสอดคล้องของการกระทำกับลักษณะนิสัย
+5. ข้อเสนอแนะเพื่อทำให้ตัวละครมีมิติมากขึ้น`;
+                    break;
+                case 'magic-system':
+                    finalPrompt += `กรุณาวิเคราะห์ระบบเวท/Arcana ครอบคลุมประเด็นต่อไปนี้:
+1. ความสอดคล้องและตรรกะภายในของระบบ
+2. ข้อจำกัดและสมดุลของพลัง
+3. ความเชื่อมโยงกับโครงเรื่องและตัวละคร
+4. โอกาสในการขยายหรือพัฒนาระบบ
+5. ข้อเสนอแนะเพื่อเพิ่มความน่าสนใจ`;
+                    break;
+                case 'continuity-check':
+                    finalPrompt += `กรุณาตรวจสอบความต่อเนื่องของเนื้อหา ครอบคลุมประเด็นต่อไปนี้:
+1. ความสอดคล้องกับเหตุการณ์ก่อนหน้า
+2. ความถูกต้องของไทม์ไลน์
+3. ความสอดคล้องของข้อมูลตัวละครและไอเทม
+4. ความรู้และข้อมูลที่ตัวละครควรมีในจุดนี้
+5. ข้อเสนอแนะเพื่อแก้ไขความไม่ต่อเนื่อง (ถ้ามี)`;
+                    break;
+                case 'scene-creation':
+                    finalPrompt += `กรุณาสร้างฉากใหม่ตามข้อมูลที่ให้ไว้ โดยมีองค์ประกอบต่อไปนี้:
+1. คำอธิบายสถานที่และบรรยากาศที่ชัดเจน
+2. บทสนทนาที่สมจริงและแสดงบุคลิกของตัวละคร
+3. การพรรณนาอารมณ์และความรู้สึกของตัวละครหลัก
+4. การเชื่อมโยงกับธีมหลักของเรื่อง
+5. ความขัดแย้งที่น่าสนใจในฉาก`;
+                    break;
+                case 'scene-rewrite':
+                    finalPrompt += `กรุณาปรับปรุงฉากตามพารามิเตอร์ที่กำหนด โดยรักษาองค์ประกอบสำคัญเหล่านี้:
+1. การเปลี่ยน POV ตามที่ระบุ โดยปรับโทนและการบรรยายให้เหมาะสม
+2. การปรับโทนและจังหวะตามที่ระบุ
+3. การเพิ่มหรือลบองค์ประกอบที่กำหนด
+4. การรักษาแก่นสำคัญของฉากและการพัฒนาตัวละคร
+5. การทำให้บทสนทนาและการบรรยายสอดคล้องกับสไตล์โดยรวมของเรื่อง`;
+                    break;
+            }
+            
+            finalPrompt += `\n\nกรุณาตอบในรูปแบบที่พร้อมนำไปใช้ใน Obsidian/Notion โดยใช้ Markdown`;
+            
+            // Show loading indicator
+            loadingIndicator.classList.remove('hidden');
+            aiResponseDiv.innerHTML = '<p class="text-gray-500 dark:text-gray-400 italic">กำลังประมวลผล...</p>';
+            
+            // Register a handler for the response
+            window.Poe.registerHandler("ashval-handler", (result, context) => {
+                // Hide loading indicator when we get any response
+                loadingIndicator.classList.add('hidden');
+                
+                // Get the response
+                const response = result.responses[0];
+                
+                if (response.status === "error") {
+                    aiResponseDiv.innerHTML = `<p class="text-red-500">เกิดข้อผิดพลาด: ${response.statusText || 'ไม่สามารถเชื่อมต่อกับ AI ได้'}</p>`;
+                } else if (response.status === "incomplete" || response.status === "complete") {
+                    // Display the content (could be partial during streaming)
+                    const formattedContent = marked.parse(response.content);
+                    aiResponseDiv.innerHTML = formattedContent;
+                    
+                    // Scroll to the bottom to show latest content
+                    aiResponseDiv.scrollTop = aiResponseDiv.scrollHeight;
+                }
+            });
+            
+            try {
+                // Send message to AI
+                await window.Poe.sendUserMessage(finalPrompt, {
+                    handler: "ashval-handler",
+                    stream: enableStream,
+                    openChat: enableChat
+                });
+            } catch (error) {
+                loadingIndicator.classList.add('hidden');
+                aiResponseDiv.innerHTML = `<p class="text-red-500">เกิดข้อผิดพลาด: ${error.message || 'ไม่สามารถส่งข้อความไปยัง AI ได้'}</p>`;
+                console.error("Error sending message:", error);
+            }
+        });
+    </script>
+</body>
+</html>
