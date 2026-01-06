@@ -8,6 +8,6 @@
     "@azure/core-auth": "^1.7.2",
     "@azure/core-sse": "^2.1.2",
     "@mistralai/mistralai": "^0.5.0",
-    "openai": "^4.52.7"
+    "openai": "^4.104.0"
   }
 }
